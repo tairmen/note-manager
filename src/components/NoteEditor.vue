@@ -70,14 +70,19 @@ export default {
     note: null
   },
   data() {
-    return {};
+    return {
+      
+    };
   },
   methods: {
     closeNote() {
       let me = this;
       me.$emit("close");
     },
-    saveNote() {},
+    saveNote() {
+      let me = this;
+      me.$emit("save");
+    },
     deleteNote() {},
     lastChange() {},
     returnChange() {},

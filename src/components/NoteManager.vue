@@ -19,7 +19,7 @@
         </div>
       </div>
     </div>
-    <note-editor v-if="editMode" :note="selected[0]" @close="closeEditCard"></note-editor>
+    <note-editor v-if="editMode" :note="selected[0]" @close="closeEditCard" @save="saveEditCard"></note-editor>
   </div>
 </template>
 
@@ -32,20 +32,28 @@ export default {
   },
   data() {
     let me = this;
+    // localStorage.setItem('notes', JSON.stringify(me.initNotes()));
+    let notesStr = localStorage.getItem('notes');
+    let notes = JSON.parse(notesStr);
+    if (!notes) {
+      notes = me.initNotes();
+      localStorage.setItem('notes', JSON.stringify(notes));
+    }
+    let clickedObj = me.createClickedObj(notes);
     return {
-      notes: me.initNotes(),
+      notes: notes,
       selected: [],
       numOfItems: 4,
       editMode: false,
-      clickedObj: {}
+      clickedObj: clickedObj,
+      noteCache: null
     }
   },
   components: {
     "note-editor": NoteEditor
   },
   created() {
-    let me = this;
-    me.clickedObj = me.createClickedObj();
+
   },
   methods: {
     initNotes() {
@@ -229,20 +237,38 @@ export default {
           me.clickedObj[me.selected[0].id] = false;
         }
         me.editMode = true;
+        me.noteCache = [];
+        me.selected[0].list.forEach(el => {
+          me.noteCache.push({
+            name: el.name,
+            status: el.status
+          });
+        });
       }
+    },
+    saveEditCard() {
+      let me = this;
+      me.selected = [];
+      me.editMode = false;
+      localStorage.setItem('notes', JSON.stringify(me.notes));
     },
     closeEditCard() {
       let me = this;
+      let idx = me.notes.findIndex(el => {
+        return el.id == me.selected[0].id;
+      })
       me.selected = [];
+      if (idx > -1) {
+        me.notes[idx].list = me.noteCache;
+      }
       me.editMode = false;
     },
     deleteItem() {
 
     },
-    createClickedObj() {
-      let me = this;
+    createClickedObj(notes) {
       let res = {};
-      me.notes.forEach(element => {
+      notes.forEach(element => {
         res[element.id] = false;
       });
       return res;
