@@ -26,15 +26,15 @@
       class="note-button"
     >Close</button>
     <div class="editor-body">
-      <h5 class="editor-title">{{note.title}}</h5>
+      <h5 class="editor-title">{{editableNote.title}}</h5>
       <button type="button" @click="addTodo" class="todo-add-button">Add</button>
       <div class="todo-list">
-        <div class="todo-item" v-for="(item, idx) in note.list" :key="idx">
+        <div class="todo-item" v-for="(item, idx) in editableNote.list" :key="idx">
           <div class="todo-checkbox">
-            <input type="checkbox" @change="checkboxChanged(idx)" v-model="item.status" />
+            <input type="checkbox" @change="changedHandler" v-model="item.status" />
           </div>
-          <textarea class="todo-text" @change="textChanged(idx)" v-model="item.name" />
-          <button @click="deleteTodo" class="todo-delete-button" type="button">
+          <textarea class="todo-text" @change="changedHandler" v-model="item.name" />
+          <button @click="deleteTodo(idx)" class="todo-delete-button" type="button">
             <svg
               class="bi bi-trash"
               width="1em"
@@ -61,7 +61,7 @@
       @close="showConfirmDelete = false" 
       @confirm="deleteNote"
       title="Confirm" 
-      msg="You are sure that you want to delete selected items?" 
+      msg="You are sure that you want to delete this note?" 
     ></vue-confirm>
     <vue-confirm
       v-if="showConfirmClose" 
@@ -85,9 +85,9 @@ export default {
     return {
       showConfirmDelete: false,
       showConfirmClose: false,
-      initialState: JSON.parse(JSON.stringify(me.note)),
+      editableNote: JSON.parse(JSON.stringify(me.note)), //deep copy
       changesStorage: [],
-      currentChangeIndex: -1,
+      currentChangeIndex: 0,
     };
   },
   components: {
@@ -100,41 +100,56 @@ export default {
     },
     saveNote() {
       let me = this;
-      me.$emit("save");
+      me.$emit("save", me.editableNote);
     },
     deleteNote() {
       let me = this;
       me.emit("delete-note");
     },
     lastChange() {
-      // let me = this;
-      // if (me.currentChangeIndex > -1) {
-
-      // }
+      let me = this;
+      console.log(me.currentChangeIndex, me.changesStorage)
+      if (me.currentChangeIndex > 0 && me.changesStorage.length > 0) {
+        if (me.currentChangeIndex == 1) {
+          me.editableNote = JSON.parse(JSON.stringify(me.note));
+        } else {
+          me.editableNote = JSON.parse(me.changesStorage[me.currentChangeIndex - 2]);
+        }      
+        me.currentChangeIndex -= 1;
+      } else {
+        console.error('no changes');
+      }
     },
     returnChange() {
-
+      let me = this;
+      if (me.currentChangeIndex < me.changesStorage.length && me.changesStorage.length > 0) {
+        me.editableNote = JSON.parse(me.changesStorage[me.currentChangeIndex]);
+        me.currentChangeIndex += 1;
+      } else {
+        console.error('no changes');
+      }
     },
     addTodo() {
-
-    },
-    deleteTodo() {
-
-    },
-    checkboxChanged(index) {
       let me = this;
-      me.changesStorage.push({
-        index: index,
-        checkbox: me.note.status
+      me.editableNote.list.push({
+        status: false,
+        name: ""
       });
-      me.currentChangeIndex += 1;
+      me.addState(); 
     },
-    textChanged(index) {
+    deleteTodo(index) {
       let me = this;
-      me.changesStorage.push({
-        index: index,
-        text: me.note.text
-      });
+      me.editableNote.list.splice(index, 1);
+      me.addState(); 
+    },
+    changedHandler() {
+      let me = this;
+      me.addState();      
+    },
+    addState() {
+      let me = this;
+      let noteState = JSON.stringify(me.editableNote);
+      me.changesStorage.push(noteState);
       me.currentChangeIndex += 1;
     }
   }
@@ -159,7 +174,6 @@ export default {
   display: inline-block;
   font-size: 16px;
   margin: 4px 2px;
-  transition-duration: 0.4s;
   cursor: pointer;
   border: 1px solid #cdcfd1;
   transition-duration: 0.3s;

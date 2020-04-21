@@ -24,7 +24,7 @@
       :note="selected[0]"
       @close="closeCard" 
       @save="saveCard"
-      @delete-note="deleteOneByCache"
+      @delete-note="deleteOne"
     ></note-editor>
     <vue-confirm
       v-if="showConfirmDelete" 
@@ -61,7 +61,6 @@ export default {
       numOfItems: 4,
       editorCardPage: false,
       clickedObj: clickedObj,
-      noteCache: null,
       cardMode: 'edit', // or 'add'
       showConfirmDelete: false
     }
@@ -99,9 +98,7 @@ export default {
         id: me.genID(),
         title: "",
         list: []
-      }      
-      me.noteCache = JSON.parse(JSON.stringify(newItem));
-      me.notes.push(newItem);
+      }
       me.selected = [newItem];
       me.editorCardPage = true;
 
@@ -114,29 +111,32 @@ export default {
           me.clickedObj[me.selected[0].id] = false;
         }
         me.editorCardPage = true;
-        me.noteCache = JSON.parse(JSON.stringify(me.selected[0]));
+      } else {
+        console.error('no selected items');
       }
     },
-    saveCard() {
+    saveCard(editedNote) {
       let me = this;
+      let idx = me.notes.findIndex(el => {
+        return el.id == me.selected[0].id;
+      });
+      if (idx > -1) {
+        if (me.cardMode == 'edit') {
+          me.notes[idx] = editedNote;
+        }
+        if (me.cardMode == 'add') {
+          me.notes.push(editedNote);
+        }       
+      } else {
+        console.error('not finded item with id=', me.selected[0].id)
+      }
       me.selected = [];
       me.editorCardPage = false;
       localStorage.setItem('notes', JSON.stringify(me.notes));
     },
     closeCard() {
       let me = this;
-      let idx = me.notes.findIndex(el => {
-        return el.id == me.noteCache.id;
-      })
       me.selected = [];
-      if (idx > -1) {
-        if (me.cardMode == 'edit') {
-          me.notes[idx] = me.noteCache;
-        }
-        if (me.cardMode == 'add') {
-          me.notes.splice(idx, 1);
-        }
-      }
       me.editorCardPage = false;
     },
     deleteItem() {
@@ -146,12 +146,16 @@ export default {
           me.removeById(me.notes, el.id);
         });
         localStorage.setItem('notes', me.notes);
+        me.selected = [];
+      } else {
+        console.error('no selected items');
       }
     },
-    deleteOneByCache() {
+    deleteOne() {
       let me = this;
-      me.removeById(me.notes, me.noteCache.id);
+      me.removeById(me.notes, me.selected[0].id);
       localStorage.setItem('notes', me.notes);
+      me.selected = [];
     },
     createClickedObj(notes) {
       let res = {};
@@ -364,6 +368,7 @@ export default {
   height: 230px;
   cursor: pointer;
   box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+  transition-duration: 0.3s;
 }
 .note-card:hover {
   background-color: #ebebeb;
