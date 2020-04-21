@@ -31,9 +31,9 @@
       <div class="todo-list">
         <div class="todo-item" v-for="(item, idx) in editableNote.list" :key="idx">
           <div class="todo-checkbox">
-            <input type="checkbox" @change="changedHandler" v-model="item.status" />
+            <input type="checkbox" @change="changedHandler(idx, 'status')" v-model="item.status" />
           </div>
-          <textarea class="todo-text" @change="changedHandler" v-model="item.name" />
+          <textarea class="todo-text" @change="changedHandler(idx, 'name')" v-model="item.name" />
           <button @click="deleteTodo(idx)" class="todo-delete-button" type="button">
             <svg
               class="bi bi-trash"
@@ -61,7 +61,7 @@
       @close="showConfirmDelete = false" 
       @confirm="deleteNote"
       title="Confirm" 
-      msg="You are sure that you want to delete this note?" 
+      msg="You are sure that you want to delete selected items?" 
     ></vue-confirm>
     <vue-confirm
       v-if="showConfirmClose" 
@@ -85,7 +85,7 @@ export default {
     return {
       showConfirmDelete: false,
       showConfirmClose: false,
-      editableNote: JSON.parse(JSON.stringify(me.note)), //deep copy
+      editableNote: JSON.parse(JSON.stringify(me.note)),
       changesStorage: [],
       currentChangeIndex: 0,
     };
@@ -110,11 +110,31 @@ export default {
       let me = this;
       console.log(me.currentChangeIndex, me.changesStorage)
       if (me.currentChangeIndex > 0 && me.changesStorage.length > 0) {
-        if (me.currentChangeIndex == 1) {
-          me.editableNote = JSON.parse(JSON.stringify(me.note));
-        } else {
-          me.editableNote = JSON.parse(me.changesStorage[me.currentChangeIndex - 2]);
-        }      
+        let currentIndex = me.changesStorage[me.currentChangeIndex - 1].index;
+        let currentAction = me.changesStorage[me.currentChangeIndex - 1].action;
+        if (currentAction == "edit") {
+          let currentField = me.changesStorage[me.currentChangeIndex - 1].key;
+          let prevValue = me.getPrevValue(currentIndex, currentField, currentAction);
+          // console.log(currentIndex, currentField, prevValue);
+          me.editableNote.list[currentIndex][currentField] = prevValue;
+        }
+        if (currentAction == "add") {
+          me.editableNote.list.splice(currentIndex, 1);
+        }
+        if (currentAction == "delete") {
+          // let isInitial = me.changesStorage[me.currentChangeIndex - 1].isInitial;
+          let prevNameValue = me.getPrevValue(currentIndex, 'name', currentAction);
+          let prevStatusValue = me.getPrevValue(currentIndex, 'status', currentAction);
+          console.log(currentIndex);
+          // if (isInitial) {
+          //   prevNameValue = prevNameValue ? prevNameValue : me.note.list[currentIndex]['name'];
+          //   prevStatusValue = prevStatusValue != null ? prevNameValue : me.note.list[currentIndex]['name'];
+          // }
+          me.editableNote.list.splice(currentIndex, 0, {
+            name: prevNameValue,
+            status: prevStatusValue
+          });
+        }
         me.currentChangeIndex -= 1;
       } else {
         console.error('no changes');
@@ -123,7 +143,23 @@ export default {
     returnChange() {
       let me = this;
       if (me.currentChangeIndex < me.changesStorage.length && me.changesStorage.length > 0) {
-        me.editableNote = JSON.parse(me.changesStorage[me.currentChangeIndex]);
+        let currentIndex = me.changesStorage[me.currentChangeIndex].index;
+        let currentAction = me.changesStorage[me.currentChangeIndex].action;
+        if (currentAction == "edit") {
+          let currentField = me.changesStorage[me.currentChangeIndex].key;
+          let returnValue = me.changesStorage[me.currentChangeIndex].value;
+          me.editableNote.list[currentIndex][currentField] = returnValue;
+        }
+        if (currentAction == "add") {
+          me.editableNote.list.push({
+            name: "",
+            status: false
+          });
+        }
+        if (currentAction == "delete") {
+          me.editableNote.list.splice(currentIndex, 1);
+        }
+        
         me.currentChangeIndex += 1;
       } else {
         console.error('no changes');
@@ -135,22 +171,45 @@ export default {
         status: false,
         name: ""
       });
-      me.addState(); 
+      let index = me.editableNote.list.length - 1;
+      me.changesStorage.push({
+        index: index,
+        action: "add"
+      });
+      me.currentChangeIndex += 1;
     },
     deleteTodo(index) {
       let me = this;
-      me.editableNote.list.splice(index, 1);
-      me.addState(); 
-    },
-    changedHandler() {
-      let me = this;
-      me.addState();      
-    },
-    addState() {
-      let me = this;
-      let noteState = JSON.stringify(me.editableNote);
-      me.changesStorage.push(noteState);
+      me.changesStorage.push({
+        index: index,
+        action: "delete",
+      });
       me.currentChangeIndex += 1;
+      me.editableNote.list.splice(index, 1);
+    },
+    changedHandler(index, key) {
+      let me = this;
+      me.changesStorage.push({
+        index: index,
+        key: key,
+        value: me.editableNote.list[index][key],
+        action: "edit"
+      });
+      me.currentChangeIndex += 1;
+    },
+    getPrevValue(currentIndex, currentField, currentAction) {
+      let me = this;
+      let backOutValue = null;
+      for (let i = me.currentChangeIndex - 2; i >= 0; i--) {
+        if (me.changesStorage[i].key == currentField && me.changesStorage[i].index == currentIndex) {
+          backOutValue = me.changesStorage[i].value;
+          break;
+        }
+      }
+      if (backOutValue == null && currentAction == "edit") {
+        backOutValue = me.note.list[currentIndex][currentField];
+      }
+      return backOutValue;
     }
   }
 };
