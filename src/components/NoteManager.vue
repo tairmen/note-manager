@@ -1,5 +1,6 @@
 <template>
   <div>
+    <!-- компонент main -->
     <div v-if="!editorCardPage">
       <h1 class="note-manager-title">{{ title }}</h1>
       <div class="buttons">
@@ -8,17 +9,24 @@
         <button type="button" @click="showConfirmDelete = true" class="crud-button">Delete</button>
       </div>
       <div class="notes-container">
+        <!-- проходим по всем заметкам и вьводим их -->
         <div class="note-card" @click="onNoteClick(note)" @dblclick="onNoteDblClick(note)" v-for="(note, index) in notes" :key="index" :id="'note' + note.id">
           <div class="card-body">
             <h5 class="card-title">{{note.title}}</h5>
             <div class="todo-list">
-              <div class="todo-item" v-for="(item, idx) in note.list" :key="idx"> <div v-if="idx < numOfItems">   <input class="todo-input" type="checkbox" disabled :checked="item.status">   <label class="todo-label">     {{item.name}}   </label> </div>
+              <!-- проходим по numOfItems todo-елементам и вьводим их -->
+              <div class="todo-item" v-for="(item, idx) in note.list" :key="idx">
+                <div v-if="idx < numOfItems">  
+                  <input class="todo-input" type="checkbox" disabled :checked="item.status">  
+                  <label class="todo-label">{{item.name}}</label>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
+    <!-- компонент editor -->
     <note-editor 
       v-if="editorCardPage" 
       :note="selected[0]"
@@ -26,6 +34,7 @@
       @save="saveCard"
       @delete-note="deleteOne"
     ></note-editor>
+    <!-- компонент confirm для подтверждения удаления -->
     <vue-confirm
       v-if="showConfirmDelete" 
       @close="showConfirmDelete = false" 
@@ -48,21 +57,33 @@ export default {
   data() {
     let me = this;
     // localStorage.setItem('notes', JSON.stringify(me.initNotes()));
-    let notesStr = localStorage.getItem('notes');
-    let notes = JSON.parse(notesStr);
-    if (!notes) {
+    // блок для импорта данньх из localStorage, если таковь имеются
+    let notes;
+    try {
+      let notesStr = localStorage.getItem('notes');
+      notes = JSON.parse(notesStr);
+      // если нет, то генерируем дефолтнье данье
+      if (!notes) {
+        notes = me.initNotes();
+        localStorage.setItem('notes', JSON.stringify(notes));
+      }
+    } catch (err) {
+      // при возникновении ошибки записьваем дефолтнье данье
+      console.error(err);
       notes = me.initNotes();
       localStorage.setItem('notes', JSON.stringify(notes));
     }
+    
+    // clickedObj - обьект для хранения даньх про клики на заметки, используются для стилей
     let clickedObj = me.createClickedObj(notes);
     return {
       notes: notes,
-      selected: [],
-      numOfItems: 4,
-      editorCardPage: false,
+      selected: [], // масив вьбраньх заметок
+      numOfItems: 4, // количество вьводимьх на екран todo елементов
+      editorCardPage: false, // переменная для переключения режимов manager и editor
       clickedObj: clickedObj,
       cardMode: 'edit', // or 'add'
-      showConfirmDelete: false
+      showConfirmDelete: false // переменная для вьвода сообщения о подтверждении
     }
   },
   components: {
@@ -75,6 +96,7 @@ export default {
   methods: {
     onNoteClick(note) {
       let me = this;
+      // переключение стилей при клике и добавление вьбраньх в selected
       if (me.clickedObj[note.id]) {
         document.querySelector('#note' + note.id).style["background-color"] = null;
         me.removeById(me.selected, note.id);
@@ -86,6 +108,7 @@ export default {
     },
     onNoteDblClick(note) {
       let me = this;
+      // двойной клик открьвает заметку в режиме редактирования
       setTimeout(() => {
         me.selected = [note];
         me.editItem();
@@ -93,6 +116,7 @@ export default {
     },
     addItem() {
       let me = this;
+      // добавление заметки, генерируем пустую и передаем в editor
       me.cardMode = 'add';
       let newItem = {
         id: me.genID(),
@@ -105,8 +129,10 @@ export default {
     },
     editItem() {
       let me = this;
+      // редактирование заметки
       me.cardMode = 'edit';
       if (me.selected.length > 0) {
+        // обнуляем стили кликов
         if (me.clickedObj[me.selected[0].id]) {
           me.clickedObj[me.selected[0].id] = false;
         }
@@ -117,21 +143,24 @@ export default {
     },
     saveCard(editedNote) {
       let me = this;
-      let idx = me.notes.findIndex(el => {
-        return el.id == me.selected[0].id;
-      });
-      if (idx > -1) {
-        if (me.cardMode == 'edit') {
+      // сохраниение заметки после редактирование в editor     
+      if (me.cardMode == 'edit') {
+        // находим ту заметку, которая редактировалась, и сохранянем ее
+        let idx = me.notes.findIndex(el => {
+          return el.id == editedNote.id;
+        });
+        if (idx > -1) {
           me.notes[idx] = editedNote;
+        } else {
+          console.error('not finded item with id=', editedNote.id)
         }
-        if (me.cardMode == 'add') {
-          me.notes.push(editedNote);
-        }       
-      } else {
-        console.error('not finded item with id=', me.selected[0].id)
       }
+      if (me.cardMode == 'add') {
+        me.notes.push(editedNote);
+      }          
       me.selected = [];
       me.editorCardPage = false;
+      // синхронизируем с localStorage
       localStorage.setItem('notes', JSON.stringify(me.notes));
     },
     closeCard() {
@@ -141,22 +170,26 @@ export default {
     },
     deleteItem() {
       let me = this;
-      if (me.selected.length > 0) {
+      if (me.selected.length > 0) { 
+        // удаляем все вьбранье записи, синхронизируем с localStorage
         me.selected.forEach(el => {
           me.removeById(me.notes, el.id);
         });
-        localStorage.setItem('notes', me.notes);
+        localStorage.setItem('notes', JSON.stringify(me.notes));
         me.selected = [];
       } else {
         console.error('no selected items');
       }
+      me.showConfirmDelete = false;
     },
-    deleteOne() {
+    deleteOne(deletedNote) {
       let me = this;
-      me.removeById(me.notes, me.selected[0].id);
-      localStorage.setItem('notes', me.notes);
+      // удаление из editor одной записи
+      me.removeById(me.notes, deletedNote);
+      localStorage.setItem('notes', JSON.stringify(me.notes));
       me.selected = [];
     },
+    // генерируем clickedObj
     createClickedObj(notes) {
       let res = {};
       notes.forEach(element => {
@@ -379,18 +412,17 @@ export default {
   white-space: nowrap;
   font-size: 17px;
   overflow: hidden;
-  margin: 25px 10px 15px 10px;
+  margin: 25px 30px 15px 30px;
 }
 .todo-list {
   height: 220px;
-  overflow: hidden;
+  overflow-y: hidden;
 }
 .todo-item {
-  height: 1.5em;
-  margin: 10px 20px 10px 10px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  margin: 12px 30px 10px 20px;
+  white-space: nowrap; 
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 .todo-input {
   margin-right: 10px;

@@ -1,5 +1,5 @@
 <template>
-  <div class="note-editor shadow">
+  <div class="note-editor">
     <button
       type="button"
       @click="saveNote"
@@ -26,7 +26,9 @@
       class="note-button"
     >Close</button>
     <div class="editor-body">
-      <h5 class="editor-title">{{editableNote.title}}</h5>
+      <div class="title-container">
+        <input type="text" class="editor-title" v-model="editableNote.title" />
+      </div>
       <button type="button" @click="addTodo" class="todo-add-button">Add</button>
       <div class="todo-list">
         <div class="todo-item" v-for="(item, idx) in editableNote.list" :key="idx">
@@ -56,6 +58,7 @@
         </div>
       </div>
     </div>
+    <!-- компонент confirm для подтверждения удаления -->
     <vue-confirm
       v-if="showConfirmDelete" 
       @close="showConfirmDelete = false" 
@@ -63,6 +66,7 @@
       title="Confirm" 
       msg="You are sure that you want to delete this note?" 
     ></vue-confirm>
+    <!-- компонент confirm для подтверждения вьхода из режима редактирования -->
     <vue-confirm
       v-if="showConfirmClose" 
       @close="showConfirmClose = false" 
@@ -85,9 +89,9 @@ export default {
     return {
       showConfirmDelete: false,
       showConfirmClose: false,
-      editableNote: JSON.parse(JSON.stringify(me.note)), //deep copy
-      changesStorage: [],
-      currentChangeIndex: 0,
+      editableNote: JSON.parse(JSON.stringify(me.note)), // создаем копию заметки для редактирования
+      changesStorage: [], // масив состояний заметки
+      currentChangeIndex: 0, // указатель на елемент масива состояний на даньй момент
     };
   },
   components: {
@@ -100,17 +104,21 @@ export default {
     },
     saveNote() {
       let me = this;
+      // при сохранинии передаем editableNote
       me.$emit("save", me.editableNote);
     },
     deleteNote() {
       let me = this;
-      me.emit("delete-note");
+      me.showConfirmDelete = false;
+      me.emit("delete-note", me.editableNote);
     },
     lastChange() {
       let me = this;
-      console.log(me.currentChangeIndex, me.changesStorage)
+      // console.log(me.currentChangeIndex, me.changesStorage)
+      // переходим на предьдущее состояние из changesStorage
       if (me.currentChangeIndex > 0 && me.changesStorage.length > 0) {
         if (me.currentChangeIndex == 1) {
+          // если предьдущего состояния нет в changesStorage, то переходим к исходному состоянию
           me.editableNote = JSON.parse(JSON.stringify(me.note));
         } else {
           me.editableNote = JSON.parse(me.changesStorage[me.currentChangeIndex - 2]);
@@ -122,6 +130,7 @@ export default {
     },
     returnChange() {
       let me = this;
+      // возвращение отмененного состояния
       if (me.currentChangeIndex < me.changesStorage.length && me.changesStorage.length > 0) {
         me.editableNote = JSON.parse(me.changesStorage[me.currentChangeIndex]);
         me.currentChangeIndex += 1;
@@ -131,6 +140,7 @@ export default {
     },
     addTodo() {
       let me = this;
+      // при добавлении генерируем пустой елемент и добавлеям состояние
       me.editableNote.list.push({
         status: false,
         name: ""
@@ -139,6 +149,7 @@ export default {
     },
     deleteTodo(index) {
       let me = this;
+      // удаляем елемент и добавлеям состояние
       me.editableNote.list.splice(index, 1);
       me.addState(); 
     },
@@ -205,10 +216,14 @@ export default {
   border: 1px solid gray;
   border-radius: 8px;
 }
-.editor-title {
-  margin: 15px 10px;
+.title-container {
   text-align: center;
+  margin: 15px 10px;
+}
+.editor-title {
+  padding: 4px 10px;
   font-size: 22px;
+  text-align: center;
 }
 .todo-item {
   display: grid;
