@@ -90,9 +90,6 @@ export default {
     "note-editor": NoteEditor,
     "vue-confirm": vueConfirm
   },
-  created() {
-
-  },
   methods: {
     onNoteClick(note) {
       let me = this;

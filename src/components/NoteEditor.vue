@@ -27,7 +27,7 @@
     >Close</button>
     <div class="editor-body">
       <div class="title-container">
-        <input type="text" class="editor-title" v-model="editableNote.title" />
+        <input type="text" class="editor-title" v-model="editableNote.title" @change="changedHandler" />
       </div>
       <button type="button" @click="addTodo" class="todo-add-button">Add</button>
       <div class="todo-list">
