@@ -5,8 +5,8 @@
       <h1 class="note-manager-title">{{ title }}</h1>
       <div class="buttons">
         <button type="button" @click="addItem" class="crud-button">Add</button>
-        <button type="button" @click="editItem" class="crud-button">Edit</button>
-        <button type="button" @click="showConfirmDelete = true" class="crud-button">Delete</button>
+        <button type="button" @click="editItem" :disabled="selected.length == 0" class="crud-button">Edit</button>
+        <button type="button" :disabled="selected.length == 0" @click="showConfirmDelete = true" class="crud-button">Delete</button>
       </div>
       <div class="notes-container">
         <!-- проходим по всем заметкам и вьводим их -->
@@ -32,7 +32,7 @@
       :note="selected[0]"
       @close="closeCard" 
       @save="saveCard"
-      @delete-note="deleteOne"
+      @deleteNote="deleteOne"
     ></note-editor>
     <!-- компонент confirm для подтверждения удаления -->
     <vue-confirm
@@ -199,6 +199,7 @@ export default {
       let ind = array.findIndex(el => {
         return el.id == id;
       });
+      // на случай если удалена запись в режиме добавление, ничего не произойдет
       if (ind > -1) {
         array.splice(ind, 1);
       }
@@ -386,6 +387,18 @@ export default {
 .crud-button:hover {
   background-color: #cdcfd1; 
   color: white;
+}
+.crud-button:disabled {
+  background-color: #e6e8e6;
+  cursor: default;
+}
+.crud-button:disabled:hover {
+  background-color: #e6e8e6;
+  color: black;
+}
+.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 .notes-container {
   margin: 20px 10px;

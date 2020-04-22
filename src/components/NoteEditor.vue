@@ -8,11 +8,13 @@
     <button
       type="button"
       @click="lastChange"
+      :disabled="currentChangeIndex == 0"
       class="note-button"
     >&#8592;</button>
     <button
       type="button"
       @click="returnChange"
+      :disabled="currentChangeIndex == changesStorage.length"
       class="note-button"
     >&#8594;</button>
     <button
@@ -86,6 +88,9 @@ export default {
   },
   data() {
     let me = this;
+    // переводим скрол на вверх
+    document.body.scrollTop = 0; // For Safari
+    document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
     return {
       showConfirmDelete: false,
       showConfirmClose: false,
@@ -110,7 +115,7 @@ export default {
     deleteNote() {
       let me = this;
       me.showConfirmDelete = false;
-      me.emit("delete-note", me.editableNote);
+      me.$emit("deleteNote", me.editableNote);
     },
     lastChange() {
       let me = this;
@@ -192,6 +197,14 @@ export default {
 .note-button:hover {
   background-color: #cdcfd1;
   color: white;
+}
+.note-button:disabled {
+  background-color: #e6e8e6;
+  cursor: default;
+}
+.note-button:disabled:hover {
+  background-color: #e6e8e6;
+  color: black;
 }
 .todo-add-button {
   color: black;
