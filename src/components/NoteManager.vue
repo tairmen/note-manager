@@ -182,9 +182,10 @@ export default {
     deleteOne(deletedNote) {
       let me = this;
       // удаление из editor одной записи
-      me.removeById(me.notes, deletedNote);
+      me.removeById(me.notes, deletedNote.id);
       localStorage.setItem('notes', JSON.stringify(me.notes));
       me.selected = [];
+      me.editorCardPage = false;
     },
     // генерируем clickedObj
     createClickedObj(notes) {
